@@ -1,0 +1,10 @@
+FROM maven:3-eclipse-temurin-11 AS build
+WORKDIR /build
+COPY . .
+RUN mvn clean package -pl owrrm -am -DappendVersionString=shine-9e227967
+FROM eclipse-temurin:11-jre
+WORKDIR /opt/owrrm
+COPY --from=build /build/owrrm/target/openwifi-rrm.jar /opt/owrrm/openwifi-rrm.jar
+RUN mkdir -p /owrrm-data /trust
+ENTRYPOINT ["java","-Xms128m","-Xmx768m","-jar","/opt/owrrm/openwifi-rrm.jar"]
+CMD ["run","--config-env","-t","/owrrm-data/topology.json","-d","/owrrm-data/device_config.json"]
