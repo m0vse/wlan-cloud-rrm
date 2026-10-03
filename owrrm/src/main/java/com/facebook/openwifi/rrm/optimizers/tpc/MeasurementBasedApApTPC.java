@@ -41,6 +41,28 @@ public class MeasurementBasedApApTPC extends TPC {
 	/** The RRM algorithm ID. */
 	public static final String ALGORITHM_ID = "measure_ap_ap";
 
+	/** Resolve PHY identity before legacy array references (PHY indexes may be sparse). */
+	static State.Radio resolveRadio(State state, State.Interface.SSID ssid) {
+		if (state == null || state.radios == null || ssid == null) {
+			return null;
+		}
+		if (ssid.phy != null && !ssid.phy.isEmpty()) {
+			for (State.Radio radio : state.radios) {
+				if (radio != null && ssid.phy.equals(radio.phy)) {
+					return radio;
+				}
+			}
+			return null;
+		}
+		if (ssid.radio == null || !ssid.radio.has("$ref") ||
+			!ssid.radio.get("$ref").isJsonPrimitive() ||
+			!ssid.radio.get("$ref").getAsJsonPrimitive().isString()) {
+			return null;
+		}
+		Integer idx = UCentralUtils.parseReferenceIndex(ssid.radio.get("$ref").getAsString());
+		return idx != null && idx >= 0 && idx < state.radios.length ? state.radios[idx] : null;
+	}
+
 	/**
 	 * Default coverage threshold between APs, in dBm.
 	 *
@@ -326,6 +348,9 @@ public class MeasurementBasedApApTPC extends TPC {
 		logger.debug("Starting TPC for the {} band", band);
 		for (String serialNumber : serialNumbers) {
 			List<? extends State> states = model.latestStates.get(serialNumber);
+			if (states == null || states.isEmpty()) {
+				continue;
+			}
 			State state = states.get(states.size() - 1);
 			if (
 				state == null || state.radios == null ||
@@ -362,18 +387,11 @@ public class MeasurementBasedApApTPC extends TPC {
 				}
 
 				for (State.Interface.SSID ssid : iface.ssids) {
-					Integer idx = UCentralUtils.parseReferenceIndex(
-						ssid.radio.get("$ref").getAsString()
-					);
-					if (idx == null) {
-						logger.error(
-							"Unable to get radio for {}, invalid radio ref {}",
-							serialNumber,
-							ssid.radio.get("$ref").getAsString()
-						);
+					State.Radio radio = resolveRadio(state, ssid);
+					if (radio == null) {
+						logger.warn("Device {}: unresolved SSID radio; skipping power adjustment for this SSID", serialNumber);
 						continue;
 					}
-					State.Radio radio = state.radios[idx];
 
 					// this specific SSID is not on the band of interest
 					Map<String, Capabilities.Phy> capabilitiesPhy =
@@ -392,7 +410,7 @@ public class MeasurementBasedApApTPC extends TPC {
 
 					int currentTxPower = radio.tx_power;
 					String bssid = ssid.bssid;
-					List<Integer> rssiValues = bssidToRssiValues.get(bssid);
+					List<Integer> rssiValues = bssidToRssiValues.getOrDefault(bssid, Collections.emptyList());
 					logger
 						.debug(
 							"Device <{}> : Interface <{}> : Channel <{}> : BSSID <{}>",
