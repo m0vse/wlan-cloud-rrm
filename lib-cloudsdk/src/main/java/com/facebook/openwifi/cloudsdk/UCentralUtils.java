@@ -332,8 +332,7 @@ public class UCentralUtils {
 							.entrySet();
 					for (Map.Entry<String, Capabilities.Phy> f : entrySet) {
 						Capabilities.Phy phy = f.getValue();
-						String bandInsideObject = phy.band.toString();
-						if (bandInsideObject.equals(radio.band)) {
+						if (phy.band != null && Arrays.asList(phy.band).contains(radio.band)) {
 							// (TODO) Remove the following dfsChannels code block
 							// when the DFS channels are available
 							Set<Integer> dfsChannels = new HashSet<>();

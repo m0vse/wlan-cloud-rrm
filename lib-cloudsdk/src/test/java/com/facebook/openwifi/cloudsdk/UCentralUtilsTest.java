@@ -13,11 +13,37 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import com.facebook.openwifi.cloudsdk.models.ap.Capabilities;
+import com.facebook.openwifi.cloudsdk.models.ap.UCentralSchema;
 
 public class UCentralUtilsTest {
+	@Test
+	void testAvailableChannelsMatchesBandArray() {
+		UCentralSchema.Radio radio = new UCentralSchema.Radio();
+		radio.band = "5G";
+		Capabilities.Phy phy = new Capabilities.Phy();
+		phy.band = new String[] {"5G", "6G"};
+		phy.channels = new int[] {36, 44, 52};
+		phy.dfs_channels = new int[] {52};
+		assertEquals(Arrays.asList(36, 44), UCentralUtils.getDeviceAvailableChannels(
+			Collections.singletonMap("ap", Arrays.asList(radio)),
+			Collections.singletonMap("ap", Collections.singletonMap("phy0", phy)),
+			UCentralUtils.AVAILABLE_CHANNELS_BAND).get("5G").get("ap"));
+		phy.band = new String[] {"2G"};
+		assertTrue(UCentralUtils.getDeviceAvailableChannels(
+			Collections.singletonMap("ap", Arrays.asList(radio)),
+			Collections.singletonMap("ap", Collections.singletonMap("phy0", phy)),
+			UCentralUtils.AVAILABLE_CHANNELS_BAND).get("5G").get("ap").isEmpty());
+		phy.band = null;
+		assertTrue(UCentralUtils.getDeviceAvailableChannels(
+			Collections.singletonMap("ap", Arrays.asList(radio)),
+			Collections.singletonMap("ap", Collections.singletonMap("phy0", phy)),
+			UCentralUtils.AVAILABLE_CHANNELS_BAND).get("5G").get("ap").isEmpty());
+	}
 	@Test
 	void test_placeholder() throws Exception {
 		assertEquals(3, 1 + 2);
