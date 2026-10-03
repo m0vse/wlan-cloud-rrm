@@ -433,6 +433,7 @@ public class LeastUsedChannelOptimizer extends ChannelOptimizer {
 				);
 
 				// Get a (new) channel of the device
+				if (availableChannelsList.isEmpty()) continue;
 				int newChannel = getNewChannel(
 					band,
 					serialNumber,

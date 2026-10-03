@@ -142,6 +142,20 @@ public class Modeler implements Runnable {
 		);
 
 		// Register config hooks
+		configManager.setChannelValidator((serial, assignment) -> {
+			List<UCentralSchema.Radio> configs = dataModel.latestDeviceStatusRadios.get(serial);
+			List<StateInfo> states = dataModel.latestStates.get(serial);
+			if (configs == null || states == null || states.isEmpty()) return false;
+			boolean matched = false;
+			for (UCentralSchema.Radio radio : configs) {
+				if (!assignment.getKey().equals(radio.band) || Boolean.FALSE.equals(radio.enable)) continue;
+				matched = true;
+				if (!com.facebook.openwifi.rrm.LiveChannelEligibility.channels(radio,
+					states.get(states.size() - 1), dataModel.latestDeviceCapabilitiesPhy.get(serial),
+					System.currentTimeMillis() / 1000).contains(assignment.getValue())) return false;
+			}
+			return matched;
+		});
 		configManager.addConfigListener(
 			getClass().getSimpleName(),
 			new ConfigManager.ConfigListener() {

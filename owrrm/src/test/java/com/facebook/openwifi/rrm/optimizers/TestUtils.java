@@ -481,6 +481,13 @@ public class TestUtils {
 		radio.phy = generatePhyString(index);
 		radio.receive_ms = 28;
 		radio.transmit_ms = 4893;
+		radio.regulatory = new State.Radio.Regulatory();
+		radio.regulatory.country = "CA";
+		radio.regulatory.timestamp = System.currentTimeMillis() / 1000;
+		radio.regulatory.channels = java.util.stream.Stream.of("2G", "5G")
+			.flatMap(band -> UCentralUtils.AVAILABLE_CHANNELS_BAND.get(band).stream())
+			.mapToInt(Integer::intValue).toArray();
+		radio.regulatory.dfs_channels = new int[0];
 		return radio;
 	}
 

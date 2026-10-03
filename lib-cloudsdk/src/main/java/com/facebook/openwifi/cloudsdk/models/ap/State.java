@@ -120,6 +120,13 @@ public class State {
 	public Unit unit;
 
 	public static class Radio {
+		public static class Regulatory {
+			public String country;
+			public int[] channels;
+			public int[] dfs_channels;
+			public long timestamp;
+		}
+		public Regulatory regulatory;
 		public long active_ms;
 		public long busy_ms;
 		public int channel; // TODO might be int[] array??

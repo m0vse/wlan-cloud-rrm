@@ -723,8 +723,7 @@ public class LeastUsedChannelOptimizerTest {
 		expected.put(deviceD, radioMapD);
 
 		// E -> The allowedChannels are not valid since 80 MHz supports 36 and 149
-		// The availableChannelsList will fall back to the default available channels
-		// No APs on current channel, so stay on it (36)
+		// An empty authorized intersection must hold, not restore default channels.
 		DeviceConfig apConfig = new DeviceConfig();
 		apConfig.allowedChannels = new HashMap<>();
 		apConfig.allowedChannels
@@ -752,10 +751,6 @@ public class LeastUsedChannelOptimizerTest {
 				TestUtils.createWifiScanList(Arrays.asList(149, 157, 165))
 			)
 		);
-		Map<String, Integer> radioMapE = new HashMap<>();
-		radioMapE.put(band, eExpectedChannel);
-		expected.put(deviceE, radioMapE);
-
 		ChannelOptimizer optimizer = new LeastUsedChannelOptimizer(
 			dataModel,
 			TEST_ZONE,

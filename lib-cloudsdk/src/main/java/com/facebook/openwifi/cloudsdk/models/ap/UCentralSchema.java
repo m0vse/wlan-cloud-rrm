@@ -20,12 +20,13 @@ import com.google.gson.annotations.SerializedName;
  */
 public class UCentralSchema {
 	public static class Radio {
+		public Boolean enable;
 		public String band;
 		public int bandwidth;
 		public JsonPrimitive channel; // either "auto" or int
 		@SerializedName("valid-channels") public int[] validChannels;
 		public String country;
-		@SerializedName("allow-dfs") public boolean allowDfs;
+		@SerializedName("allow-dfs") public Boolean allowDfs;
 		@SerializedName("channel-mode") public String channelMode;
 		@SerializedName("channel-width") public int channelWidth;
 		@SerializedName("require-mode") public String requireMode;

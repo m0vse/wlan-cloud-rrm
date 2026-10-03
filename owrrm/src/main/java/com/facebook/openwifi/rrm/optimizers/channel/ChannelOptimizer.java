@@ -25,6 +25,7 @@ import com.facebook.openwifi.cloudsdk.WifiScanEntry;
 import com.facebook.openwifi.cloudsdk.ies.HTOperation;
 import com.facebook.openwifi.cloudsdk.ies.VHTOperation;
 import com.facebook.openwifi.cloudsdk.models.ap.State;
+import com.facebook.openwifi.cloudsdk.models.ap.UCentralSchema;
 import com.facebook.openwifi.rrm.DeviceConfig;
 import com.facebook.openwifi.rrm.DeviceDataManager;
 import com.facebook.openwifi.rrm.modules.ConfigManager;
@@ -421,8 +422,20 @@ public abstract class ChannelOptimizer {
 		int channelWidth,
 		List<Integer> availableChannelsList
 	) {
+		List<UCentralSchema.Radio> configured = model.latestDeviceStatusRadios.get(serialNumber);
+		State state = ModelerUtils.getLatestState(model.latestStates).get(serialNumber);
+		List<Integer> authorized = null;
+		if (configured != null) for (UCentralSchema.Radio radio : configured) {
+			if (!band.equals(radio.band) || Boolean.FALSE.equals(radio.enable)) continue;
+			List<Integer> live = com.facebook.openwifi.rrm.LiveChannelEligibility.channels(radio, state,
+				model.latestDeviceCapabilitiesPhy.get(serialNumber), System.currentTimeMillis() / 1000);
+			if (authorized == null) authorized = new ArrayList<>(live);
+			else authorized.retainAll(live);
+		}
+		if (authorized == null || authorized.isEmpty()) return Collections.emptyList();
 		List<Integer> newAvailableChannelsList =
 			new ArrayList<>(availableChannelsList);
+		newAvailableChannelsList.retainAll(authorized);
 
 		// Update the available channels if the bandwidth info is taken into account
 		if (band.equals(UCentralConstants.BAND_5G) && channelWidth > 20) {
@@ -441,9 +454,7 @@ public abstract class ChannelOptimizer {
 			deviceCfg.userChannels != null &&
 				deviceCfg.userChannels.get(band) != null
 		) {
-			newAvailableChannelsList = Arrays.asList(
-				deviceCfg.userChannels.get(band)
-			);
+			newAvailableChannelsList.retainAll(Arrays.asList(deviceCfg.userChannels.get(band)));
 			logger.debug(
 				"Device {}: userChannels {}",
 				serialNumber,
@@ -462,24 +473,9 @@ public abstract class ChannelOptimizer {
 			newAvailableChannelsList.retainAll(allowedChannels);
 		}
 
-		// If the intersection of the above steps gives an empty list,
-		// turn back to use the default available channels list
+		// Empty intersections must hold channel changes, never widen authority.
 		if (newAvailableChannelsList.isEmpty()) {
-			logger.debug(
-				"Device {}: the updated availableChannelsList is empty!!! " +
-					"userChannels or allowedChannels might be invalid " +
-					"Fall back to the default available channels list"
-			);
-			if (band.equals(UCentralConstants.BAND_5G) && channelWidth > 20) {
-				newAvailableChannelsList =
-					new ArrayList<>(availableChannelsList);
-				newAvailableChannelsList.retainAll(
-					AVAILABLE_CHANNELS_WIDTH
-						.getOrDefault(channelWidth, availableChannelsList)
-				);
-			} else {
-				newAvailableChannelsList = availableChannelsList;
-			}
+			logger.warn("Device {}: holding channel assignment; no eligible channel intersection", serialNumber);
 		}
 		logger.debug(
 			"Device {}: the updated availableChannelsList is {}",

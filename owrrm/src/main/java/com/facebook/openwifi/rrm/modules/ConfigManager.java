@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiPredicate;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -43,6 +44,10 @@ public class ConfigManager implements Runnable {
 
 	/** The uCentral client. */
 	private final UCentralClient client;
+	private BiPredicate<String, Map.Entry<String, Integer>> channelAllowed = (serial, entry) -> false;
+	public void setChannelValidator(BiPredicate<String, Map.Entry<String, Integer>> validator) {
+		channelAllowed = validator;
+	}
 
 	/** Runtime per-device data. */
 	private class DeviceData {
@@ -334,6 +339,11 @@ public class ConfigManager implements Runnable {
 			channelList.putAll(deviceConfig.userChannels);
 		}
 		if (!channelList.isEmpty()) {
+			channelList.entrySet().removeIf(entry -> {
+				if (channelAllowed.test(serialNumber, entry)) return false;
+				logger.warn("Device {}: holding {} channel change; no fresh live regulatory authorization", serialNumber, entry.getKey());
+				return true;
+			});
 			modified |= UCentralUtils.setRadioConfigField(
 				serialNumber,
 				config,

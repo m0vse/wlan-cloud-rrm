@@ -232,11 +232,13 @@ public class RandomChannelInitializer extends ChannelOptimizer {
 						availableChannelsList
 					);
 				Set<Integer> availableChannelsSet = new TreeSet<>(
+					// Skip instead of falling back to unverified hardware channels.
 					availableChannelsList
 				);
 				Set<Integer> newAvailableChannelsSet = new TreeSet<>(
 					newAvailableChannelsList
 				);
+				if (!newAvailableChannelsSet.contains(newChannel)) continue;
 				if (!availableChannelsSet.equals(newAvailableChannelsSet)) {
 					logger.info(
 						"Device {}: userChannels/allowedChannels are disabled in " +
