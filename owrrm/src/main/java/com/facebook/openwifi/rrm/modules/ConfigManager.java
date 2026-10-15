@@ -361,6 +361,16 @@ public class ConfigManager implements Runnable {
 			txPowerList.putAll(deviceConfig.userTxPowers);
 		}
 		if (!txPowerList.isEmpty()) {
+			// Zero is not applied by the deployed ath11k per-VIF power path.
+			// Hold the existing setting instead of sending an unsupported target
+			// or guessing a positive hardware minimum. Include persisted/manual
+			// targets here so stale optimizer results cannot bypass this guard.
+			txPowerList.entrySet().removeIf(entry -> {
+				Integer power = entry.getValue();
+				if (power != null && power > 0 && power <= 30) return false;
+				logger.warn("Device {}: holding {} power change; unsupported RRM target {} dBm", serialNumber, entry.getKey(), power);
+				return true;
+			});
 			modified |= UCentralUtils.setRadioConfigField(
 				serialNumber,
 				config,
